@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    font-family: Arial;
+    margin: 0;
+    background: #f4f6f9;
+}
+
+.header {
+    background: #1a2a44;
+    color: white;
+    padding: 20px;
+    font-size: 20px;
+}
+
+.container {
+    padding: 30px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+button {
+    background: #2e5aac;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+}
+
+input {
+    padding: 10px;
+    width: 300px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+Dashboard Trabalhista – Positivo Tecnologia
+</div>
+
+<div class="container">
+
+<div class="card">
+<h3>Enviar Relatório</h3>
+
+<form method="POST">
+<input type="text" name="email" placeholder="email1@gmail.com, email2@gmail.com">
+<br><br>
+<button type="submit">Gerar e Enviar PDF</button>
+</form>
+
+<p>{{ mensagem }}</p>
+</div>
+
+<div class="card">
+<h3>Indicadores Trabalhistas</h3>
+<canvas id="grafico"></canvas>
+</div>
+
+</div>
+
+<script>
+const ctx = document.getElementById('grafico');
+
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ['Custos', 'Compliance', 'RH', 'Automação'],
+        datasets: [{
+            label: 'Impacto (%)',
+            data: [90, 85, 80, 75]
+        }]
+    }
+});
+</script>
+
+</body>
+</html>
