@@ -29,6 +29,10 @@ def usuario_logado() -> bool:
 
 
 def buscar_dados_ibge():
+    """
+    Busca dados públicos e aplica fallback executivo quando necessário.
+    Não expõe erro técnico no relatório final.
+    """
     dados = {
         "ocupados_brasil": "O Brasil segue com contingente superior a 100 milhões de pessoas ocupadas.",
         "fonte_ocupados": "IBGE",
@@ -61,6 +65,9 @@ def buscar_dados_ibge():
 
 
 def buscar_manchetes():
+    """
+    Mantida para evolução futura do sistema, sem expor essa camada no PDF final.
+    """
     urls = os.environ.get("NEWS_FEED_URLS", "").strip()
     if not urls:
         return []
@@ -92,7 +99,7 @@ def buscar_manchetes():
 
 def gerar_pdf_bytes() -> bytes:
     dados_ibge = buscar_dados_ibge()
-    _noticias = buscar_manchetes()
+    _noticias = buscar_manchetes()  # reservado para evolução futura
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -399,18 +406,9 @@ def enviar_email(destino: str) -> None:
 
 def validar_login(username: str, password: str) -> bool:
     usuarios = [
-        (
-            os.environ.get("APP_USER_1", ""),
-            os.environ.get("APP_PASSWORD_1", "")
-        ),
-        (
-            os.environ.get("APP_USER_2", ""),
-            os.environ.get("APP_PASSWORD_2", "")
-        ),
-        (
-            os.environ.get("APP_USER_3", ""),
-            os.environ.get("APP_PASSWORD_3", "")
-        ),
+        (os.environ.get("APP_USER_1", ""), os.environ.get("APP_PASSWORD_1", "")),
+        (os.environ.get("APP_USER_2", ""), os.environ.get("APP_PASSWORD_2", "")),
+        (os.environ.get("APP_USER_3", ""), os.environ.get("APP_PASSWORD_3", "")),
     ]
 
     for user, senha in usuarios:
@@ -462,11 +460,11 @@ def index():
         else:
             mensagem = "Informe pelo menos um e-mail."
 
-   return render_template(
-    "index.html",
-    mensagem=mensagem,
-    usuario=session.get("usuario", "Usuário")
-)
+    return render_template(
+        "index.html",
+        mensagem=mensagem,
+        usuario=session.get("usuario", "Usuário")
+    )
 
 
 if __name__ == "__main__":
