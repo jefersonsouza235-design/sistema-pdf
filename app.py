@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for, session
 import os
 import smtplib
 from io import BytesIO
@@ -17,13 +17,10 @@ from reportlab.platypus import (
 )
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "troque-essa-chave-em-producao")
 
 
 def gerar_pdf_bytes() -> bytes:
-    """
-    Gera o PDF em memória, sem depender de wkhtmltopdf.
-    Ideal para deploy no Render.
-    """
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -78,7 +75,6 @@ def gerar_pdf_bytes() -> bytes:
 
     story = []
 
-    # Capa simples
     story.append(Paragraph("RELATÓRIO EXECUTIVO", styles["TitleExec"]))
     story.append(
         Paragraph(
@@ -97,12 +93,11 @@ def gerar_pdf_bytes() -> bytes:
     story.append(Paragraph("Visão Geral", styles["HeadingExec"]))
     story.append(
         Paragraph(
-            "O ambiente trabalhista brasileiro está passando por mudanças "
-            "estruturais ligadas à digitalização, à ampliação da fiscalização "
-            "e à maior pressão social por saúde mental, jornada sustentável e "
-            "conformidade documental. Para uma organização como a Positivo "
-            "Tecnologia, isso significa maior necessidade de governança, "
-            "padronização de processos e capacidade de resposta rápida.",
+            "O ambiente trabalhista brasileiro está passando por mudanças estruturais "
+            "ligadas à digitalização, à ampliação da fiscalização e à maior pressão "
+            "social por saúde mental, jornada sustentável e conformidade documental. "
+            "Para uma organização como a Positivo Tecnologia, isso significa maior "
+            "necessidade de governança, padronização de processos e capacidade de resposta rápida.",
             styles["BodyExec"],
         )
     )
@@ -112,9 +107,8 @@ def gerar_pdf_bytes() -> bytes:
     blocos = [
         (
             "1. Digitalização e fiscalização via eSocial",
-            "O eSocial consolidou mais de 15 obrigações trabalhistas, fiscais "
-            "e previdenciárias, aumentando a capacidade de cruzamento de dados "
-            "e detecção automática de inconsistências.",
+            "O eSocial consolidou mais de 15 obrigações trabalhistas, fiscais e previdenciárias, "
+            "aumentando a capacidade de cruzamento de dados e detecção automática de inconsistências.",
             [
                 "Maior risco de penalidades por erro operacional.",
                 "Necessidade de integração entre RH, folha e controles internos.",
@@ -124,9 +118,8 @@ def gerar_pdf_bytes() -> bytes:
         ),
         (
             "2. Saúde mental e afastamentos",
-            "O Brasil figura entre os países com maior prevalência de ansiedade, "
-            "e o avanço dos afastamentos por transtornos mentais pressiona "
-            "produtividade, absenteísmo e gestão das lideranças.",
+            "O Brasil figura entre os países com maior prevalência de ansiedade, e o avanço "
+            "dos afastamentos por transtornos mentais pressiona produtividade, absenteísmo e gestão das lideranças.",
             [
                 "Maior custo indireto com afastamentos e substituições.",
                 "Pressão sobre retenção e clima organizacional.",
@@ -136,8 +129,8 @@ def gerar_pdf_bytes() -> bytes:
         ),
         (
             "3. Jornada e pressão por reorganização operacional",
-            "As discussões sobre redução de jornada e revisão de escalas reforçam "
-            "a necessidade de elevar produtividade por hora e rever alocação de mão de obra.",
+            "As discussões sobre redução de jornada e revisão de escalas reforçam a necessidade "
+            "de elevar produtividade por hora e rever alocação de mão de obra.",
             [
                 "Possível aumento de custo operacional sem automação.",
                 "Necessidade de redesenho de turnos e cobertura operacional.",
@@ -147,8 +140,8 @@ def gerar_pdf_bytes() -> bytes:
         ),
         (
             "4. Formalização, documentação e compliance",
-            "Com mais trabalhadores ocupados e maior rastreabilidade estatal, "
-            "o ambiente tende a exigir processos mais robustos e evidências formais.",
+            "Com mais trabalhadores ocupados e maior rastreabilidade estatal, o ambiente tende "
+            "a exigir processos mais robustos e evidências formais.",
             [
                 "Maior exposição a risco regulatório e trabalhista.",
                 "Necessidade de processos auditáveis.",
@@ -175,13 +168,11 @@ def gerar_pdf_bytes() -> bytes:
     story.append(Paragraph("Aplicação na Positivo Tecnologia", styles["HeadingExec"]))
     story.append(
         Paragraph(
-            "Para a Positivo Tecnologia, a necessidade mais concreta não é apenas "
-            "‘acompanhar tendências’, mas estruturar resposta operacional. Em "
-            "operações industriais, a prioridade tende a ser produtividade e "
-            "automação para absorver pressões de jornada e custo. Em RH, a "
-            "necessidade é fortalecer saúde mental, gestão de afastamentos, "
-            "qualidade cadastral e governança. Em compliance e jurídico, a "
-            "prioridade é rastreabilidade, documentação e prevenção de passivos.",
+            "Para a Positivo Tecnologia, a necessidade mais concreta não é apenas acompanhar tendências, "
+            "mas estruturar resposta operacional. Em operações industriais, a prioridade tende a ser "
+            "produtividade e automação para absorver pressões de jornada e custo. Em RH, a necessidade é "
+            "fortalecer saúde mental, gestão de afastamentos, qualidade cadastral e governança. Em compliance "
+            "e jurídico, a prioridade é rastreabilidade, documentação e prevenção de passivos.",
             styles["BodyExec"],
         )
     )
@@ -219,9 +210,7 @@ def enviar_email(destino: str) -> None:
     email_password = os.environ.get("EMAIL_PASSWORD")
 
     if not email_user or not email_password:
-        raise RuntimeError(
-            "Variáveis EMAIL_USER e EMAIL_PASSWORD não configuradas."
-        )
+        raise RuntimeError("Variáveis EMAIL_USER e EMAIL_PASSWORD não configuradas.")
 
     pdf_bytes = gerar_pdf_bytes()
 
@@ -229,9 +218,7 @@ def enviar_email(destino: str) -> None:
     msg["Subject"] = "Relatório Executivo - Tendências Trabalhistas"
     msg["From"] = email_user
     msg["To"] = destino
-    msg.set_content(
-        "Segue em anexo o relatório executivo gerado automaticamente pelo sistema."
-    )
+    msg.set_content("Segue em anexo o relatório executivo gerado automaticamente pelo sistema.")
 
     msg.add_attachment(
         pdf_bytes,
@@ -245,8 +232,41 @@ def enviar_email(destino: str) -> None:
         smtp.send_message(msg)
 
 
+def usuario_logado() -> bool:
+    return session.get("logado", False)
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    mensagem = ""
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        admin_user = os.environ.get("APP_USER", "admin")
+        admin_pass = os.environ.get("APP_PASSWORD", "123456")
+
+        if username == admin_user and password == admin_pass:
+            session["logado"] = True
+            return redirect(url_for("index"))
+
+        mensagem = "Usuário ou senha inválidos."
+
+    return render_template("login.html", mensagem=mensagem)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
 @app.route("/", methods=["GET", "POST"])
 def index():
+    if not usuario_logado():
+        return redirect(url_for("login"))
+
     mensagem = ""
 
     if request.method == "POST":
