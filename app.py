@@ -30,66 +30,123 @@ def usuario_logado() -> bool:
 
 def buscar_dados_ibge():
     """
-    Busca alguns dados públicos do IBGE.
-    Se algo falhar, devolve fallback seguro.
+    Busca dados públicos e monta fallback executivo caso algo falhe.
     """
     dados = {
-        "ocupados_brasil": "Mais de 100 milhões de pessoas ocupadas",
+        "ocupados_brasil": "O Brasil segue com contingente superior a 100 milhões de pessoas ocupadas.",
         "fonte_ocupados": "IBGE",
         "atualizado_em": datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC"),
+        "populacao_projetada": "Dado não carregado nesta execução.",
+        "fonte_populacao": "IBGE - fallback do sistema",
+        "mensagem_contexto": (
+            "Os indicadores automáticos foram parcialmente atualizados. "
+            "O sistema manteve texto executivo de segurança para preservar a leitura do relatório."
+        ),
     }
 
     try:
-        # API oficial do IBGE
-        # Mantemos a estrutura preparada para evoluir depois com tabelas SIDRA específicas.
         resposta = requests.get(
             "https://servicodados.ibge.gov.br/api/v1/projecoes/populacao",
-            timeout=15,
+            timeout=20,
+            headers={"User-Agent": "RadarTrabalhista/1.0"},
         )
+
         if resposta.ok:
             payload = resposta.json()
-            projecao = payload.get("projecao", "não informado")
-            dados["populacao_projetada"] = f"{projecao:,}".replace(",", ".")
-            dados["fonte_populacao"] = "IBGE - API oficial"
+            projecao = payload.get("projecao")
+
+            if projecao:
+                try:
+                    projecao_int = int(float(projecao))
+                    dados["populacao_projetada"] = f"{projecao_int:,}".replace(",", ".")
+                except Exception:
+                    dados["populacao_projetada"] = str(projecao)
+
+                dados["fonte_populacao"] = "IBGE - API oficial"
+                dados["mensagem_contexto"] = (
+                    "Os indicadores automáticos foram atualizados com sucesso a partir de fonte pública oficial."
+                )
+            else:
+                dados["populacao_projetada"] = (
+                    "Projeção oficial indisponível no retorno da API nesta execução."
+                )
+                dados["fonte_populacao"] = "IBGE - resposta sem projeção"
         else:
-            dados["populacao_projetada"] = "Não disponível"
-            dados["fonte_populacao"] = "IBGE - indisponível no momento"
+            dados["populacao_projetada"] = (
+                "Projeção oficial temporariamente indisponível; manter leitura com base no contexto regulatório atual."
+            )
+            dados["fonte_populacao"] = f"IBGE - API retornou status {resposta.status_code}"
+
     except Exception:
-        dados["populacao_projetada"] = "Não disponível"
-        dados["fonte_populacao"] = "IBGE - indisponível no momento"
+        dados["populacao_projetada"] = (
+            "Projeção oficial temporariamente indisponível; sistema aplicou fallback executivo."
+        )
+        dados["fonte_populacao"] = "IBGE - indisponível nesta execução"
 
     return dados
 
 
 def buscar_manchetes():
     """
-    Lê feeds RSS/Atom configurados por variável de ambiente.
-    Exemplo:
-    NEWS_FEED_URLS=https://site1/feed,https://site2/rss
+    Busca manchetes a partir de feeds RSS/Atom configurados.
     """
     urls = os.environ.get("NEWS_FEED_URLS", "").strip()
     if not urls:
-        return []
+        return {
+            "itens": [],
+            "status": "nenhum_feed_configurado",
+            "mensagem": (
+                "Nenhum feed foi configurado no ambiente. "
+                "Adicione NEWS_FEED_URLS para ativar leituras recentes automáticas."
+            ),
+        }
 
     resultados = []
+
     for url in [u.strip() for u in urls.split(",") if u.strip()]:
         try:
             feed = feedparser.parse(url)
-            for entry in feed.entries[:2]:
+
+            if getattr(feed, "bozo", False) and not getattr(feed, "entries", []):
+                continue
+
+            feed_titulo = getattr(feed.feed, "title", url)
+
+            for entry in getattr(feed, "entries", [])[:3]:
+                titulo = getattr(entry, "title", "Sem título")
+                link = getattr(entry, "link", "")
+                publicado = getattr(entry, "published", "")
+
                 resultados.append({
-                    "titulo": getattr(entry, "title", "Sem título"),
-                    "link": getattr(entry, "link", ""),
-                    "fonte": getattr(feed.feed, "title", url),
+                    "titulo": titulo,
+                    "link": link,
+                    "fonte": feed_titulo,
+                    "publicado": publicado,
                 })
+
         except Exception:
             continue
 
-    return resultados[:5]
+    if resultados:
+        return {
+            "itens": resultados[:6],
+            "status": "ok",
+            "mensagem": "Leituras recentes carregadas automaticamente a partir de feeds configurados.",
+        }
+
+    return {
+        "itens": [],
+        "status": "sem_resultado",
+        "mensagem": (
+            "Os feeds foram configurados, mas não retornaram itens válidos nesta execução. "
+            "Revise as URLs cadastradas em NEWS_FEED_URLS."
+        ),
+    }
 
 
 def gerar_pdf_bytes() -> bytes:
     dados_ibge = buscar_dados_ibge()
-    manchetes = buscar_manchetes()
+    noticias = buscar_manchetes()
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -149,7 +206,7 @@ def gerar_pdf_bytes() -> bytes:
     story.append(Paragraph("Relatório Executivo Automatizado", styles["HeadingExec"]))
     story.append(
         Paragraph(
-            "Atualizado automaticamente com dados oficiais e parâmetros executivos.",
+            "Atualizado automaticamente com dados públicos, parâmetros executivos e leituras recentes configuradas.",
             styles["BodyExec"],
         )
     )
@@ -164,9 +221,14 @@ def gerar_pdf_bytes() -> bytes:
     story.append(Paragraph("Resumo Executivo", styles["HeadingExec"]))
     story.append(
         Paragraph(
-            "Este relatório combina parâmetros executivos fixos com dados atualizados "
-            "automaticamente para apoiar decisões em RH, compliance e liderança operacional.",
+            "Este relatório combina automação, leitura executiva e dados públicos para apoiar decisões em RH, compliance e liderança operacional.",
             styles["BodyExec"],
+        )
+    )
+    story.append(
+        Paragraph(
+            dados_ibge.get("mensagem_contexto", ""),
+            styles["SmallExec"],
         )
     )
 
@@ -175,11 +237,11 @@ def gerar_pdf_bytes() -> bytes:
         ListFlowable(
             [
                 ListItem(Paragraph(
-                    f"População projetada no Brasil: {dados_ibge.get('populacao_projetada', 'Não disponível')}.",
+                    f"População projetada no Brasil: {dados_ibge.get('populacao_projetada', 'Não informado')}.",
                     styles["BodyExec"],
                 )),
                 ListItem(Paragraph(
-                    f"Mercado de trabalho: {dados_ibge.get('ocupados_brasil', 'Não disponível')}.",
+                    f"Mercado de trabalho: {dados_ibge.get('ocupados_brasil', 'Não informado')}",
                     styles["BodyExec"],
                 )),
             ],
@@ -189,7 +251,7 @@ def gerar_pdf_bytes() -> bytes:
     )
     story.append(
         Paragraph(
-            f"Fonte dos indicadores: {dados_ibge.get('fonte_populacao', 'IBGE')} | {dados_ibge.get('fonte_ocupados', 'IBGE')}",
+            f"Fontes dos indicadores: {dados_ibge.get('fonte_populacao', 'IBGE')} | {dados_ibge.get('fonte_ocupados', 'IBGE')}",
             styles["SmallExec"],
         )
     )
@@ -254,18 +316,26 @@ def gerar_pdf_bytes() -> bytes:
         story.append(Spacer(1, 8))
 
     story.append(Paragraph("Leituras Recentes Configuradas", styles["HeadingExec"]))
-    if manchetes:
+    story.append(
+        Paragraph(
+            noticias.get("mensagem", ""),
+            styles["SmallExec"],
+        )
+    )
+
+    if noticias.get("itens"):
+        lista_noticias = []
+        for item in noticias["itens"]:
+            texto = f"{item['titulo']} — {item['fonte']}"
+            if item.get("publicado"):
+                texto += f" — {item['publicado']}"
+            if item.get("link"):
+                texto += f" — {item['link']}"
+            lista_noticias.append(ListItem(Paragraph(texto, styles["BodyExec"])))
+
         story.append(
             ListFlowable(
-                [
-                    ListItem(
-                        Paragraph(
-                            f"{item['titulo']} — {item['fonte']} — {item['link']}",
-                            styles["BodyExec"],
-                        )
-                    )
-                    for item in manchetes
-                ],
+                lista_noticias,
                 bulletType="bullet",
                 leftIndent=14,
             )
@@ -273,7 +343,7 @@ def gerar_pdf_bytes() -> bytes:
     else:
         story.append(
             Paragraph(
-                "Nenhum feed configurado no momento. Você pode adicionar URLs RSS/Atom na variável NEWS_FEED_URLS.",
+                "Sem itens recentes válidos para exibir nesta execução.",
                 styles["BodyExec"],
             )
         )
@@ -281,9 +351,7 @@ def gerar_pdf_bytes() -> bytes:
     story.append(Paragraph("Aplicação na Positivo Tecnologia", styles["HeadingExec"]))
     story.append(
         Paragraph(
-            "Para a Positivo Tecnologia, o ganho principal dessa etapa é deixar de depender "
-            "de um relatório totalmente fixo. A partir daqui, o sistema passa a incorporar "
-            "sinais atualizados para enriquecer decisões em RH, compliance, operações e gestão.",
+            "Para a Positivo Tecnologia, o ganho principal desta etapa é reduzir dependência de relatório totalmente fixo e incorporar sinais atualizados para apoiar decisões em RH, compliance, operações e gestão.",
             styles["BodyExec"],
         )
     )
@@ -293,8 +361,8 @@ def gerar_pdf_bytes() -> bytes:
         ListFlowable(
             [
                 ListItem(Paragraph("Manter dados sensíveis em variáveis de ambiente.", styles["BodyExec"])),
-                ListItem(Paragraph("Evoluir a integração com indicadores oficiais do IBGE.", styles["BodyExec"])),
-                ListItem(Paragraph("Configurar feeds confiáveis para acompanhar mudanças regulatórias.", styles["BodyExec"])),
+                ListItem(Paragraph("Revisar periodicamente a qualidade dos feeds configurados.", styles["BodyExec"])),
+                ListItem(Paragraph("Evoluir a integração com indicadores públicos mais específicos.", styles["BodyExec"])),
                 ListItem(Paragraph("Criar versões do relatório por área: RH, compliance e operações.", styles["BodyExec"])),
             ],
             bulletType="bullet",
