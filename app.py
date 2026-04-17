@@ -462,7 +462,11 @@ def index():
         else:
             mensagem = "Informe pelo menos um e-mail."
 
-    return render_template("index.html", mensagem=mensagem)
+   return render_template(
+    "index.html",
+    mensagem=mensagem,
+    usuario=session.get("usuario", "Usuário")
+)
 
 
 if __name__ == "__main__":

@@ -42,6 +42,21 @@
             color: rgba(255,255,255,0.78);
         }
 
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-badge {
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.14);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: white;
+        }
+
         .logout {
             text-decoration: none;
             color: white;
@@ -256,6 +271,17 @@
             .hero h1 {
                 font-size: 28px;
             }
+
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .topbar-right {
+                width: 100%;
+                flex-wrap: wrap;
+            }
         }
     </style>
 </head>
@@ -266,7 +292,10 @@
             <div class="brand-subtitle">Plataforma de relatórios executivos automatizados</div>
         </div>
 
-        <a class="logout" href="/logout">Sair</a>
+        <div class="topbar-right">
+            <div class="user-badge">Usuário logado: <strong>{{ usuario }}</strong></div>
+            <a class="logout" href="/logout">Sair</a>
+        </div>
     </div>
 
     <div class="page">
