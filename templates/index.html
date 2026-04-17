@@ -3,186 +3,355 @@
 <head>
     <meta charset="UTF-8">
     <title>Radar Trabalhista</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f9;
-            margin: 0;
+        * {
+            box-sizing: border-box;
         }
 
-        .header {
-            background: #1a2a44;
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #101828;
+        }
+
+        .topbar {
+            background: linear-gradient(135deg, #0f172a, #1d3557);
             color: white;
-            padding: 18px 24px;
+            padding: 18px 28px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        }
+
+        .brand-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .brand-title {
-            display: flex;
-            flex-direction: column;
+            font-size: 22px;
+            font-weight: 700;
         }
 
-        .brand-title strong {
-            font-size: 20px;
-        }
-
-        .brand-title span {
+        .brand-subtitle {
             font-size: 13px;
-            opacity: 0.8;
+            color: rgba(255,255,255,0.78);
         }
 
         .logout {
-            color: white;
             text-decoration: none;
+            color: white;
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.14);
+            padding: 10px 14px;
+            border-radius: 10px;
             font-size: 14px;
-            background: rgba(255,255,255,0.12);
-            padding: 8px 12px;
-            border-radius: 6px;
         }
 
-        .container {
-            padding: 30px;
-            max-width: 1100px;
+        .page {
+            max-width: 1200px;
             margin: 0 auto;
+            padding: 28px;
         }
 
         .hero {
-            background: white;
-            border-radius: 12px;
-            padding: 28px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
+            background: linear-gradient(135deg, #ffffff, #eef4ff);
+            border: 1px solid #dbe5f2;
+            border-radius: 22px;
+            padding: 32px;
+            box-shadow: 0 10px 30px rgba(16,24,40,0.06);
+            margin-bottom: 22px;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.4fr 0.8fr;
+            gap: 24px;
+            align-items: center;
         }
 
         .hero h1 {
-            margin-top: 0;
-            color: #1a2a44;
+            margin: 0 0 14px;
+            font-size: 34px;
+            line-height: 1.15;
+            color: #0f172a;
         }
 
         .hero p {
+            margin: 0;
+            line-height: 1.7;
+            color: #475467;
+            font-size: 15px;
+            max-width: 720px;
+        }
+
+        .hero-panel {
+            background: #ffffff;
+            border: 1px solid #dbe5f2;
+            border-radius: 18px;
+            padding: 20px;
+        }
+
+        .hero-panel-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #2e5aac;
+            margin-bottom: 12px;
+        }
+
+        .hero-stat {
+            margin-bottom: 14px;
+        }
+
+        .hero-stat strong {
+            display: block;
+            font-size: 24px;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .hero-stat span {
+            font-size: 13px;
             color: #667085;
-            line-height: 1.6;
         }
 
         .grid {
             display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
+            grid-template-columns: 1.3fr 0.9fr;
+            gap: 22px;
         }
 
         .card {
             background: white;
+            border: 1px solid #e4e7ec;
+            border-radius: 18px;
             padding: 24px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            box-shadow: 0 8px 24px rgba(16,24,40,0.05);
         }
 
         .card h3 {
-            margin-top: 0;
-            color: #1a2a44;
+            margin: 0 0 10px;
+            color: #101828;
+            font-size: 20px;
         }
 
-        input {
+        .card p,
+        .card li {
+            color: #475467;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .hint {
+            margin-bottom: 14px;
+            color: #667085;
+            font-size: 14px;
+        }
+
+        .label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #344054;
+        }
+
+        .input {
             width: 100%;
-            padding: 12px;
-            margin: 12px 0 16px;
-            border: 1px solid #cfd8e3;
-            border-radius: 8px;
-            box-sizing: border-box;
+            border: 1px solid #d0d5dd;
+            border-radius: 12px;
+            padding: 14px 15px;
+            margin-bottom: 16px;
+            outline: none;
+            transition: 0.2s ease;
+            font-size: 14px;
         }
 
-        button {
-            background: #2e5aac;
+        .input:focus {
+            border-color: #2e5aac;
+            box-shadow: 0 0 0 4px rgba(46,90,172,0.12);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #2e5aac, #1f3c88);
             color: white;
             border: none;
-            padding: 12px 18px;
-            border-radius: 8px;
+            padding: 14px 18px;
+            border-radius: 12px;
             cursor: pointer;
-            font-weight: bold;
-        }
-
-        button:hover {
-            background: #24498f;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 12px 24px rgba(46,90,172,0.18);
         }
 
         .msg {
             margin-top: 16px;
-            color: #1a2a44;
-            font-weight: bold;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #ecfdf3;
+            color: #027a48;
+            border: 1px solid #abefc6;
+            font-size: 14px;
+            font-weight: 600;
         }
 
-        .hint {
-            color: #667085;
-            font-size: 14px;
-            margin-bottom: 10px;
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
         }
 
         .tag {
-            display: inline-block;
-            font-size: 12px;
             background: #eef4ff;
             color: #2e5aac;
-            padding: 6px 10px;
+            border: 1px solid #d6e4ff;
+            padding: 8px 12px;
             border-radius: 999px;
-            margin-right: 8px;
-            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
-        ul.clean {
+        .clean-list {
+            margin: 0;
             padding-left: 18px;
-            color: #475467;
-            line-height: 1.7;
+        }
+
+        .mini-boxes {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .mini-box {
+            background: #f8fafc;
+            border: 1px solid #eaecf0;
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .mini-box strong {
+            display: block;
+            margin-bottom: 6px;
+            color: #101828;
+            font-size: 14px;
+        }
+
+        @media (max-width: 920px) {
+            .hero-grid,
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .page {
+                padding: 18px;
+            }
+
+            .hero h1 {
+                font-size: 28px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="brand-title">
-            <strong>Radar Trabalhista</strong>
-            <span>Relatórios executivos automatizados</span>
+    <div class="topbar">
+        <div class="brand-wrap">
+            <div class="brand-title">Radar Trabalhista</div>
+            <div class="brand-subtitle">Plataforma de relatórios executivos automatizados</div>
         </div>
+
         <a class="logout" href="/logout">Sair</a>
     </div>
 
-    <div class="container">
+    <div class="page">
         <div class="hero">
-            <h1>Transforme dados regulatórios em decisão executiva</h1>
-            <p>
-                O Radar Trabalhista centraliza geração de relatórios, envio automatizado e análise executiva
-                para apoiar RH, compliance, jurídico e liderança operacional.
-            </p>
-            <div>
-                <span class="tag">Automação</span>
-                <span class="tag">Compliance</span>
-                <span class="tag">RH Estratégico</span>
-                <span class="tag">Relatórios Executivos</span>
+            <div class="hero-grid">
+                <div>
+                    <h1>Converta sinais regulatórios em ação executiva.</h1>
+                    <p>
+                        O Radar Trabalhista foi desenhado para apoiar decisões mais rápidas e consistentes
+                        em ambientes corporativos, integrando automação, análise executiva e geração de
+                        relatórios com padrão profissional.
+                    </p>
+
+                    <div class="tag-list">
+                        <div class="tag">RH Estratégico</div>
+                        <div class="tag">Compliance</div>
+                        <div class="tag">Jornada & Operação</div>
+                        <div class="tag">Automação</div>
+                        <div class="tag">Governança</div>
+                    </div>
+                </div>
+
+                <div class="hero-panel">
+                    <div class="hero-panel-title">Visão rápida</div>
+
+                    <div class="hero-stat">
+                        <strong>1 clique</strong>
+                        <span>para gerar e enviar relatório executivo</span>
+                    </div>
+
+                    <div class="hero-stat">
+                        <strong>+ controle</strong>
+                        <span>sobre acesso, padronização e distribuição</span>
+                    </div>
+
+                    <div class="hero-stat">
+                        <strong>+ valor</strong>
+                        <span>na comunicação com liderança e áreas críticas</span>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="grid">
             <div class="card">
                 <h3>Gerar e enviar relatório</h3>
-                <div class="hint">Informe um ou mais e-mails separados por vírgula.</div>
+                <div class="hint">
+                    Informe um ou mais e-mails separados por vírgula para distribuir o documento automaticamente.
+                </div>
 
                 <form method="POST">
-                    <input type="text" name="email" placeholder="email1@exemplo.com, email2@exemplo.com">
-                    <button type="submit">Gerar e Enviar PDF</button>
+                    <label class="label">Destinatários</label>
+                    <input class="input" type="text" name="email" placeholder="email1@empresa.com, email2@empresa.com">
+                    <button class="btn" type="submit">Gerar e Enviar PDF</button>
                 </form>
 
-                <div class="msg">{{ mensagem }}</div>
+                {% if mensagem %}
+                    <div class="msg">{{ mensagem }}</div>
+                {% endif %}
             </div>
 
             <div class="card">
-                <h3>Proposta de valor</h3>
-                <ul class="clean">
-                    <li>Padroniza relatórios executivos</li>
-                    <li>Reduz trabalho manual</li>
+                <h3>Valor entregue</h3>
+                <ul class="clean-list">
+                    <li>Padroniza relatórios para liderança</li>
+                    <li>Reduz esforço manual do time</li>
                     <li>Melhora a governança documental</li>
-                    <li>Apoia tomada de decisão</li>
-                    <li>Escala para múltiplas áreas</li>
+                    <li>Acelera a tomada de decisão</li>
+                    <li>Cria base para expansão por área</li>
                 </ul>
+
+                <div class="mini-boxes">
+                    <div class="mini-box">
+                        <strong>Aplicação imediata</strong>
+                        Suporte a RH, compliance, jurídico trabalhista e gestão operacional.
+                    </div>
+                    <div class="mini-box">
+                        <strong>Escalabilidade</strong>
+                        Estrutura pronta para versões por tema, área ou tipo de relatório.
+                    </div>
+                    <div class="mini-box">
+                        <strong>Percepção executiva</strong>
+                        Interface premium com padrão de produto corporativo.
+                    </div>
+                </div>
             </div>
         </div>
     </div>
