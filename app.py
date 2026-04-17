@@ -31,13 +31,14 @@ def usuario_logado() -> bool:
 def buscar_dados_ibge():
     """
     Busca dados públicos e aplica fallback executivo quando necessário.
+    Não expõe erro técnico no relatório final.
     """
     dados = {
         "ocupados_brasil": "O Brasil segue com contingente superior a 100 milhões de pessoas ocupadas.",
         "fonte_ocupados": "IBGE",
         "atualizado_em": datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC"),
-        "populacao_projetada": "Referência populacional oficial indisponível nesta execução.",
-        "fonte_populacao": "IBGE - consulta automática",
+        "populacao_projetada": None,
+        "fonte_populacao": "IBGE - API oficial",
     }
 
     try:
@@ -57,9 +58,6 @@ def buscar_dados_ibge():
                     dados["populacao_projetada"] = f"{projecao_int:,}".replace(",", ".")
                 except Exception:
                     dados["populacao_projetada"] = str(projecao)
-
-                dados["fonte_populacao"] = "IBGE - API oficial"
-
     except Exception:
         pass
 
@@ -68,7 +66,7 @@ def buscar_dados_ibge():
 
 def buscar_manchetes():
     """
-    Mantida para evolução futura do sistema, mas sem expor essa camada no PDF.
+    Mantida para evolução futura do sistema, sem expor essa camada no PDF final.
     """
     urls = os.environ.get("NEWS_FEED_URLS", "").strip()
     if not urls:
@@ -105,7 +103,7 @@ def buscar_manchetes():
 
 def gerar_pdf_bytes() -> bytes:
     dados_ibge = buscar_dados_ibge()
-    _noticias = buscar_manchetes()  # mantido para evolução futura
+    _noticias = buscar_manchetes()  # reservado para evolução futura
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -161,6 +159,7 @@ def gerar_pdf_bytes() -> bytes:
 
     story = []
 
+    # Capa / abertura
     story.append(Paragraph("RADAR TRABALHISTA", styles["TitleExec"]))
     story.append(Paragraph("Relatório Executivo Automatizado", styles["HeadingExec"]))
     story.append(
@@ -177,17 +176,19 @@ def gerar_pdf_bytes() -> bytes:
     )
     story.append(Spacer(1, 12))
 
+    # Resumo executivo
     story.append(Paragraph("Resumo Executivo", styles["HeadingExec"]))
     story.append(
         Paragraph(
-            "O ambiente trabalhista brasileiro segue marcado por aumento de rastreabilidade regulatória, "
-            "pressão por consistência documental e maior necessidade de maturidade em gestão de pessoas. "
-            "Para empresas com operações e estruturas corporativas mais complexas, o impacto tende a ser "
-            "distribuído entre RH, compliance, jurídico e operação.",
+            "O ambiente trabalhista brasileiro segue marcado por maior rastreabilidade regulatória, "
+            "pressão por consistência documental e necessidade crescente de maturidade em gestão de pessoas. "
+            "Para organizações com operações e estruturas corporativas mais complexas, os efeitos tendem a se distribuir "
+            "entre RH, compliance, jurídico e operação.",
             styles["BodyExec"],
         )
     )
 
+    # Cenário atual
     story.append(Paragraph("Cenário Atual", styles["HeadingExec"]))
     story.append(
         Paragraph(
@@ -197,29 +198,48 @@ def gerar_pdf_bytes() -> bytes:
             styles["BodyExec"],
         )
     )
+
+    itens_cenario = []
+
+    if dados_ibge.get("populacao_projetada"):
+        itens_cenario.append(
+            ListItem(
+                Paragraph(
+                    f"População projetada no Brasil: {dados_ibge['populacao_projetada']}.",
+                    styles["BodyExec"],
+                )
+            )
+        )
+
+    itens_cenario.append(
+        ListItem(
+            Paragraph(
+                f"Mercado de trabalho: {dados_ibge.get('ocupados_brasil', 'Não informado')}",
+                styles["BodyExec"],
+            )
+        )
+    )
+
     story.append(
         ListFlowable(
-            [
-                ListItem(Paragraph(
-                    f"População projetada no Brasil: {dados_ibge.get('populacao_projetada', 'Não informado')}.",
-                    styles["BodyExec"],
-                )),
-                ListItem(Paragraph(
-                    f"Mercado de trabalho: {dados_ibge.get('ocupados_brasil', 'Não informado')}",
-                    styles["BodyExec"],
-                )),
-            ],
+            itens_cenario,
             bulletType="bullet",
             leftIndent=14,
         )
     )
+
+    fontes_cenario = [dados_ibge.get("fonte_ocupados", "IBGE")]
+    if dados_ibge.get("populacao_projetada"):
+        fontes_cenario.insert(0, dados_ibge.get("fonte_populacao", "IBGE"))
+
     story.append(
         Paragraph(
-            f"Fontes dos indicadores: {dados_ibge.get('fonte_populacao', 'IBGE')} | {dados_ibge.get('fonte_ocupados', 'IBGE')}",
+            f"Fontes dos indicadores: {' | '.join(fontes_cenario)}",
             styles["SmallExec"],
         )
     )
 
+    # Tendências
     story.append(Paragraph("Tendências e Impactos", styles["HeadingExec"]))
 
     blocos = [
@@ -283,6 +303,7 @@ def gerar_pdf_bytes() -> bytes:
         story.append(Paragraph(fonte, styles["SmallExec"]))
         story.append(Spacer(1, 8))
 
+    # Implicações para a Positivo
     story.append(Paragraph("Implicações para a Positivo Tecnologia", styles["HeadingExec"]))
     story.append(
         ListFlowable(
@@ -300,7 +321,7 @@ def gerar_pdf_bytes() -> bytes:
                     styles["BodyExec"]
                 )),
                 ListItem(Paragraph(
-                    "Na gestão executiva, a principal demanda passa a ser transformar exigências regulatórias em prioridade operacional, evitando que o tema fique restrito ao RH.",
+                    "Na gestão executiva, a principal demanda passa a ser transformar exigências regulatórias em prioridade operacional, evitando que o tema fique restrito a uma única área.",
                     styles["BodyExec"]
                 )),
             ],
@@ -309,6 +330,7 @@ def gerar_pdf_bytes() -> bytes:
         )
     )
 
+    # Prioridades
     story.append(Paragraph("Prioridades de Atenção", styles["HeadingExec"]))
     story.append(
         ListFlowable(
@@ -335,6 +357,7 @@ def gerar_pdf_bytes() -> bytes:
         )
     )
 
+    # Fontes finais
     story.append(Paragraph("Fontes", styles["HeadingExec"]))
     story.append(
         ListFlowable(
@@ -353,7 +376,7 @@ def gerar_pdf_bytes() -> bytes:
     story.append(Spacer(1, 12))
     story.append(
         Paragraph(
-            "Relatório automatizado gerado pelo Radar Trabalhista.",
+            "Documento gerado automaticamente para apoio à análise executiva.",
             styles["SmallExec"],
         )
     )
