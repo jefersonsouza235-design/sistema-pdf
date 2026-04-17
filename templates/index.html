@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Trabalhista</title>
+    <title>Radar Trabalhista</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,10 +14,23 @@
             background: #1a2a44;
             color: white;
             padding: 18px 24px;
-            font-size: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .brand-title {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title strong {
+            font-size: 20px;
+        }
+
+        .brand-title span {
+            font-size: 13px;
+            opacity: 0.8;
         }
 
         .logout {
@@ -31,17 +44,42 @@
 
         .container {
             padding: 30px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .hero {
+            background: white;
+            border-radius: 12px;
+            padding: 28px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            margin-top: 0;
+            color: #1a2a44;
+        }
+
+        .hero p {
+            color: #667085;
+            line-height: 1.6;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
         }
 
         .card {
             background: white;
             padding: 24px;
             border-radius: 10px;
-            max-width: 760px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
         }
 
-        h3 {
+        .card h3 {
             margin-top: 0;
             color: #1a2a44;
         }
@@ -65,6 +103,10 @@
             font-weight: bold;
         }
 
+        button:hover {
+            background: #24498f;
+        }
+
         .msg {
             margin-top: 16px;
             color: #1a2a44;
@@ -76,25 +118,72 @@
             font-size: 14px;
             margin-bottom: 10px;
         }
+
+        .tag {
+            display: inline-block;
+            font-size: 12px;
+            background: #eef4ff;
+            color: #2e5aac;
+            padding: 6px 10px;
+            border-radius: 999px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        ul.clean {
+            padding-left: 18px;
+            color: #475467;
+            line-height: 1.7;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <div>Dashboard Trabalhista – Positivo Tecnologia</div>
+        <div class="brand-title">
+            <strong>Radar Trabalhista</strong>
+            <span>Relatórios executivos automatizados</span>
+        </div>
         <a class="logout" href="/logout">Sair</a>
     </div>
 
     <div class="container">
-        <div class="card">
-            <h3>Gerar e enviar relatório</h3>
-            <div class="hint">Você pode informar um ou mais e-mails separados por vírgula.</div>
+        <div class="hero">
+            <h1>Transforme dados regulatórios em decisão executiva</h1>
+            <p>
+                O Radar Trabalhista centraliza geração de relatórios, envio automatizado e análise executiva
+                para apoiar RH, compliance, jurídico e liderança operacional.
+            </p>
+            <div>
+                <span class="tag">Automação</span>
+                <span class="tag">Compliance</span>
+                <span class="tag">RH Estratégico</span>
+                <span class="tag">Relatórios Executivos</span>
+            </div>
+        </div>
 
-            <form method="POST">
-                <input type="text" name="email" placeholder="email1@exemplo.com, email2@exemplo.com">
-                <button type="submit">Gerar e Enviar PDF</button>
-            </form>
+        <div class="grid">
+            <div class="card">
+                <h3>Gerar e enviar relatório</h3>
+                <div class="hint">Informe um ou mais e-mails separados por vírgula.</div>
 
-            <div class="msg">{{ mensagem }}</div>
+                <form method="POST">
+                    <input type="text" name="email" placeholder="email1@exemplo.com, email2@exemplo.com">
+                    <button type="submit">Gerar e Enviar PDF</button>
+                </form>
+
+                <div class="msg">{{ mensagem }}</div>
+            </div>
+
+            <div class="card">
+                <h3>Proposta de valor</h3>
+                <ul class="clean">
+                    <li>Padroniza relatórios executivos</li>
+                    <li>Reduz trabalho manual</li>
+                    <li>Melhora a governança documental</li>
+                    <li>Apoia tomada de decisão</li>
+                    <li>Escala para múltiplas áreas</li>
+                </ul>
+            </div>
         </div>
     </div>
 </body>
