@@ -29,10 +29,6 @@ def usuario_logado() -> bool:
 
 
 def buscar_dados_ibge():
-    """
-    Busca dados públicos e aplica fallback executivo quando necessário.
-    Não expõe erro técnico no relatório final.
-    """
     dados = {
         "ocupados_brasil": "O Brasil segue com contingente superior a 100 milhões de pessoas ocupadas.",
         "fonte_ocupados": "IBGE",
@@ -65,9 +61,6 @@ def buscar_dados_ibge():
 
 
 def buscar_manchetes():
-    """
-    Mantida para evolução futura do sistema, sem expor essa camada no PDF final.
-    """
     urls = os.environ.get("NEWS_FEED_URLS", "").strip()
     if not urls:
         return []
@@ -84,15 +77,11 @@ def buscar_manchetes():
             feed_titulo = getattr(feed.feed, "title", url)
 
             for entry in getattr(feed, "entries", [])[:3]:
-                titulo = getattr(entry, "title", "Sem título")
-                link = getattr(entry, "link", "")
-                publicado = getattr(entry, "published", "")
-
                 resultados.append({
-                    "titulo": titulo,
-                    "link": link,
+                    "titulo": getattr(entry, "title", "Sem título"),
+                    "link": getattr(entry, "link", ""),
                     "fonte": feed_titulo,
-                    "publicado": publicado,
+                    "publicado": getattr(entry, "published", ""),
                 })
 
         except Exception:
@@ -103,7 +92,7 @@ def buscar_manchetes():
 
 def gerar_pdf_bytes() -> bytes:
     dados_ibge = buscar_dados_ibge()
-    _noticias = buscar_manchetes()  # reservado para evolução futura
+    _noticias = buscar_manchetes()
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -159,9 +148,8 @@ def gerar_pdf_bytes() -> bytes:
 
     story = []
 
-    # Capa / abertura
     story.append(Paragraph("RADAR TRABALHISTA", styles["TitleExec"]))
-    story.append(Paragraph("Relatório Executivo Automatizado", styles["HeadingExec"]))
+    story.append(Paragraph("Relatório Executivo", styles["HeadingExec"]))
     story.append(
         Paragraph(
             "Atualizado automaticamente com dados públicos e parâmetros executivos para apoio à tomada de decisão.",
@@ -176,7 +164,6 @@ def gerar_pdf_bytes() -> bytes:
     )
     story.append(Spacer(1, 12))
 
-    # Resumo executivo
     story.append(Paragraph("Resumo Executivo", styles["HeadingExec"]))
     story.append(
         Paragraph(
@@ -188,7 +175,6 @@ def gerar_pdf_bytes() -> bytes:
         )
     )
 
-    # Cenário atual
     story.append(Paragraph("Cenário Atual", styles["HeadingExec"]))
     story.append(
         Paragraph(
@@ -239,7 +225,6 @@ def gerar_pdf_bytes() -> bytes:
         )
     )
 
-    # Tendências
     story.append(Paragraph("Tendências e Impactos", styles["HeadingExec"]))
 
     blocos = [
@@ -303,7 +288,6 @@ def gerar_pdf_bytes() -> bytes:
         story.append(Paragraph(fonte, styles["SmallExec"]))
         story.append(Spacer(1, 8))
 
-    # Implicações para a Positivo
     story.append(Paragraph("Implicações para a Positivo Tecnologia", styles["HeadingExec"]))
     story.append(
         ListFlowable(
@@ -330,7 +314,6 @@ def gerar_pdf_bytes() -> bytes:
         )
     )
 
-    # Prioridades
     story.append(Paragraph("Prioridades de Atenção", styles["HeadingExec"]))
     story.append(
         ListFlowable(
@@ -357,7 +340,6 @@ def gerar_pdf_bytes() -> bytes:
         )
     )
 
-    # Fontes finais
     story.append(Paragraph("Fontes", styles["HeadingExec"]))
     story.append(
         ListFlowable(
@@ -396,10 +378,12 @@ def enviar_email(destino: str) -> None:
     pdf_bytes = gerar_pdf_bytes()
 
     msg = EmailMessage()
-    msg["Subject"] = "Relatório Executivo - Radar Trabalhista"
+    msg["Subject"] = "Radar Trabalhista - Relatório Executivo"
     msg["From"] = email_user
     msg["To"] = destino
-    msg.set_content("Segue em anexo o relatório executivo gerado automaticamente pelo sistema.")
+    msg.set_content(
+        "Segue em anexo o relatório executivo gerado automaticamente pelo Radar Trabalhista."
+    )
 
     msg.add_attachment(
         pdf_bytes,
@@ -413,6 +397,29 @@ def enviar_email(destino: str) -> None:
         smtp.send_message(msg)
 
 
+def validar_login(username: str, password: str) -> bool:
+    usuarios = [
+        (
+            os.environ.get("APP_USER_1", ""),
+            os.environ.get("APP_PASSWORD_1", "")
+        ),
+        (
+            os.environ.get("APP_USER_2", ""),
+            os.environ.get("APP_PASSWORD_2", "")
+        ),
+        (
+            os.environ.get("APP_USER_3", ""),
+            os.environ.get("APP_PASSWORD_3", "")
+        ),
+    ]
+
+    for user, senha in usuarios:
+        if user and senha and username == user and password == senha:
+            return True
+
+    return False
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     mensagem = ""
@@ -421,11 +428,9 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
 
-        admin_user = os.environ.get("APP_USER", "admin")
-        admin_pass = os.environ.get("APP_PASSWORD", "123456")
-
-        if username == admin_user and password == admin_pass:
+        if validar_login(username, password):
             session["logado"] = True
+            session["usuario"] = username
             return redirect(url_for("index"))
 
         mensagem = "Usuário ou senha inválidos."
