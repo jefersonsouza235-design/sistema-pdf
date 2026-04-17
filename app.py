@@ -3,6 +3,10 @@ import os
 import smtplib
 from io import BytesIO
 from email.message import EmailMessage
+from datetime import datetime, timezone
+
+import requests
+import feedparser
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -20,7 +24,73 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "troque-essa-chave-em-producao")
 
 
+def usuario_logado() -> bool:
+    return session.get("logado", False)
+
+
+def buscar_dados_ibge():
+    """
+    Busca alguns dados públicos do IBGE.
+    Se algo falhar, devolve fallback seguro.
+    """
+    dados = {
+        "ocupados_brasil": "Mais de 100 milhões de pessoas ocupadas",
+        "fonte_ocupados": "IBGE",
+        "atualizado_em": datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC"),
+    }
+
+    try:
+        # API oficial do IBGE
+        # Mantemos a estrutura preparada para evoluir depois com tabelas SIDRA específicas.
+        resposta = requests.get(
+            "https://servicodados.ibge.gov.br/api/v1/projecoes/populacao",
+            timeout=15,
+        )
+        if resposta.ok:
+            payload = resposta.json()
+            projecao = payload.get("projecao", "não informado")
+            dados["populacao_projetada"] = f"{projecao:,}".replace(",", ".")
+            dados["fonte_populacao"] = "IBGE - API oficial"
+        else:
+            dados["populacao_projetada"] = "Não disponível"
+            dados["fonte_populacao"] = "IBGE - indisponível no momento"
+    except Exception:
+        dados["populacao_projetada"] = "Não disponível"
+        dados["fonte_populacao"] = "IBGE - indisponível no momento"
+
+    return dados
+
+
+def buscar_manchetes():
+    """
+    Lê feeds RSS/Atom configurados por variável de ambiente.
+    Exemplo:
+    NEWS_FEED_URLS=https://site1/feed,https://site2/rss
+    """
+    urls = os.environ.get("NEWS_FEED_URLS", "").strip()
+    if not urls:
+        return []
+
+    resultados = []
+    for url in [u.strip() for u in urls.split(",") if u.strip()]:
+        try:
+            feed = feedparser.parse(url)
+            for entry in feed.entries[:2]:
+                resultados.append({
+                    "titulo": getattr(entry, "title", "Sem título"),
+                    "link": getattr(entry, "link", ""),
+                    "fonte": getattr(feed.feed, "title", url),
+                })
+        except Exception:
+            continue
+
+    return resultados[:5]
+
+
 def gerar_pdf_bytes() -> bytes:
+    dados_ibge = buscar_dados_ibge()
+    manchetes = buscar_manchetes()
+
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -75,77 +145,95 @@ def gerar_pdf_bytes() -> bytes:
 
     story = []
 
-    story.append(Paragraph("RELATÓRIO EXECUTIVO", styles["TitleExec"]))
+    story.append(Paragraph("RADAR TRABALHISTA", styles["TitleExec"]))
+    story.append(Paragraph("Relatório Executivo Automatizado", styles["HeadingExec"]))
     story.append(
         Paragraph(
-            "Tendências da Legislação Trabalhista no Brasil",
-            styles["HeadingExec"],
-        )
-    )
-    story.append(
-        Paragraph(
-            "Análise estratégica aplicada à Positivo Tecnologia S.A.",
+            "Atualizado automaticamente com dados oficiais e parâmetros executivos.",
             styles["BodyExec"],
         )
     )
-    story.append(Spacer(1, 16))
-
-    story.append(Paragraph("Visão Geral", styles["HeadingExec"]))
     story.append(
         Paragraph(
-            "O ambiente trabalhista brasileiro está passando por mudanças estruturais "
-            "ligadas à digitalização, à ampliação da fiscalização e à maior pressão "
-            "social por saúde mental, jornada sustentável e conformidade documental. "
-            "Para uma organização como a Positivo Tecnologia, isso significa maior "
-            "necessidade de governança, padronização de processos e capacidade de resposta rápida.",
+            f"Atualizado em: {dados_ibge.get('atualizado_em', 'não informado')}",
+            styles["SmallExec"],
+        )
+    )
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("Resumo Executivo", styles["HeadingExec"]))
+    story.append(
+        Paragraph(
+            "Este relatório combina parâmetros executivos fixos com dados atualizados "
+            "automaticamente para apoiar decisões em RH, compliance e liderança operacional.",
             styles["BodyExec"],
         )
     )
 
-    story.append(Paragraph("Principais Tendências e Impactos", styles["HeadingExec"]))
+    story.append(Paragraph("Indicadores Atualizados", styles["HeadingExec"]))
+    story.append(
+        ListFlowable(
+            [
+                ListItem(Paragraph(
+                    f"População projetada no Brasil: {dados_ibge.get('populacao_projetada', 'Não disponível')}.",
+                    styles["BodyExec"],
+                )),
+                ListItem(Paragraph(
+                    f"Mercado de trabalho: {dados_ibge.get('ocupados_brasil', 'Não disponível')}.",
+                    styles["BodyExec"],
+                )),
+            ],
+            bulletType="bullet",
+            leftIndent=14,
+        )
+    )
+    story.append(
+        Paragraph(
+            f"Fonte dos indicadores: {dados_ibge.get('fonte_populacao', 'IBGE')} | {dados_ibge.get('fonte_ocupados', 'IBGE')}",
+            styles["SmallExec"],
+        )
+    )
+
+    story.append(Paragraph("Tendências e Impactos", styles["HeadingExec"]))
 
     blocos = [
         (
             "1. Digitalização e fiscalização via eSocial",
-            "O eSocial consolidou mais de 15 obrigações trabalhistas, fiscais e previdenciárias, "
-            "aumentando a capacidade de cruzamento de dados e detecção automática de inconsistências.",
+            "O aumento da digitalização pressiona consistência cadastral, integração entre sistemas e redução de erros operacionais.",
             [
-                "Maior risco de penalidades por erro operacional.",
-                "Necessidade de integração entre RH, folha e controles internos.",
-                "Redução da tolerância para inconsistências cadastrais e de eventos.",
+                "Maior necessidade de governança documental.",
+                "Redução da tolerância a falhas cadastrais e de eventos.",
+                "Pressão por integração entre RH, folha e controles internos.",
             ],
             "Fonte específica: https://www.gov.br/esocial",
         ),
         (
             "2. Saúde mental e afastamentos",
-            "O Brasil figura entre os países com maior prevalência de ansiedade, e o avanço "
-            "dos afastamentos por transtornos mentais pressiona produtividade, absenteísmo e gestão das lideranças.",
+            "A pressão sobre produtividade e clima organizacional reforça a necessidade de gestão preventiva e acompanhamento de afastamentos.",
             [
-                "Maior custo indireto com afastamentos e substituições.",
-                "Pressão sobre retenção e clima organizacional.",
-                "Necessidade de programas preventivos e acompanhamento gerencial.",
+                "Maior custo indireto com ausências.",
+                "Necessidade de gestão ativa de bem-estar.",
+                "Pressão sobre retenção e liderança.",
             ],
             "Fontes específicas: https://www.who.int | https://www.gov.br/inss",
         ),
         (
-            "3. Jornada e pressão por reorganização operacional",
-            "As discussões sobre redução de jornada e revisão de escalas reforçam a necessidade "
-            "de elevar produtividade por hora e rever alocação de mão de obra.",
+            "3. Jornada e reorganização operacional",
+            "Discussões sobre jornada fortalecem a agenda de produtividade por hora e automação.",
             [
-                "Possível aumento de custo operacional sem automação.",
-                "Necessidade de redesenho de turnos e cobertura operacional.",
-                "Maior importância de indicadores de produtividade e eficiência.",
+                "Possível aumento de custo sem ganho de eficiência.",
+                "Necessidade de redesenho operacional.",
+                "Maior uso de indicadores de produtividade.",
             ],
             "Fonte específica: https://www.weforum.org/agenda/2023/10/four-day-workweek-results",
         ),
         (
-            "4. Formalização, documentação e compliance",
-            "Com mais trabalhadores ocupados e maior rastreabilidade estatal, o ambiente tende "
-            "a exigir processos mais robustos e evidências formais.",
+            "4. Formalização e rastreabilidade",
+            "O ambiente regulatório exige processos mais auditáveis e documentação mais robusta.",
             [
-                "Maior exposição a risco regulatório e trabalhista.",
-                "Necessidade de processos auditáveis.",
-                "Fortalecimento do papel de compliance e jurídico trabalhista.",
+                "Maior exposição regulatória.",
+                "Necessidade de processos padronizados.",
+                "Fortalecimento de compliance e jurídico trabalhista.",
             ],
             "Fonte específica: https://www.ibge.gov.br/explica/desemprego.php",
         ),
@@ -165,14 +253,37 @@ def gerar_pdf_bytes() -> bytes:
         story.append(Paragraph(fonte, styles["SmallExec"]))
         story.append(Spacer(1, 8))
 
+    story.append(Paragraph("Leituras Recentes Configuradas", styles["HeadingExec"]))
+    if manchetes:
+        story.append(
+            ListFlowable(
+                [
+                    ListItem(
+                        Paragraph(
+                            f"{item['titulo']} — {item['fonte']} — {item['link']}",
+                            styles["BodyExec"],
+                        )
+                    )
+                    for item in manchetes
+                ],
+                bulletType="bullet",
+                leftIndent=14,
+            )
+        )
+    else:
+        story.append(
+            Paragraph(
+                "Nenhum feed configurado no momento. Você pode adicionar URLs RSS/Atom na variável NEWS_FEED_URLS.",
+                styles["BodyExec"],
+            )
+        )
+
     story.append(Paragraph("Aplicação na Positivo Tecnologia", styles["HeadingExec"]))
     story.append(
         Paragraph(
-            "Para a Positivo Tecnologia, a necessidade mais concreta não é apenas acompanhar tendências, "
-            "mas estruturar resposta operacional. Em operações industriais, a prioridade tende a ser "
-            "produtividade e automação para absorver pressões de jornada e custo. Em RH, a necessidade é "
-            "fortalecer saúde mental, gestão de afastamentos, qualidade cadastral e governança. Em compliance "
-            "e jurídico, a prioridade é rastreabilidade, documentação e prevenção de passivos.",
+            "Para a Positivo Tecnologia, o ganho principal dessa etapa é deixar de depender "
+            "de um relatório totalmente fixo. A partir daqui, o sistema passa a incorporar "
+            "sinais atualizados para enriquecer decisões em RH, compliance, operações e gestão.",
             styles["BodyExec"],
         )
     )
@@ -181,11 +292,10 @@ def gerar_pdf_bytes() -> bytes:
     story.append(
         ListFlowable(
             [
-                ListItem(Paragraph("Mapear riscos trabalhistas por processo crítico.", styles["BodyExec"])),
-                ListItem(Paragraph("Revisar integração entre folha, RH e controles de jornada.", styles["BodyExec"])),
-                ListItem(Paragraph("Criar agenda formal de saúde mental e acompanhamento de afastamentos.", styles["BodyExec"])),
-                ListItem(Paragraph("Priorizar automação e produtividade em áreas operacionais.", styles["BodyExec"])),
-                ListItem(Paragraph("Usar indicadores mensais para jornada, absenteísmo, erros de folha e passivos.", styles["BodyExec"])),
+                ListItem(Paragraph("Manter dados sensíveis em variáveis de ambiente.", styles["BodyExec"])),
+                ListItem(Paragraph("Evoluir a integração com indicadores oficiais do IBGE.", styles["BodyExec"])),
+                ListItem(Paragraph("Configurar feeds confiáveis para acompanhar mudanças regulatórias.", styles["BodyExec"])),
+                ListItem(Paragraph("Criar versões do relatório por área: RH, compliance e operações.", styles["BodyExec"])),
             ],
             bulletType="bullet",
             leftIndent=14,
@@ -195,7 +305,7 @@ def gerar_pdf_bytes() -> bytes:
     story.append(Spacer(1, 12))
     story.append(
         Paragraph(
-            "Relatório automatizado gerado pelo sistema interno.",
+            "Relatório automatizado gerado pelo Radar Trabalhista.",
             styles["SmallExec"],
         )
     )
@@ -215,7 +325,7 @@ def enviar_email(destino: str) -> None:
     pdf_bytes = gerar_pdf_bytes()
 
     msg = EmailMessage()
-    msg["Subject"] = "Relatório Executivo - Tendências Trabalhistas"
+    msg["Subject"] = "Relatório Executivo - Radar Trabalhista"
     msg["From"] = email_user
     msg["To"] = destino
     msg.set_content("Segue em anexo o relatório executivo gerado automaticamente pelo sistema.")
@@ -230,10 +340,6 @@ def enviar_email(destino: str) -> None:
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
         smtp.login(email_user, email_password)
         smtp.send_message(msg)
-
-
-def usuario_logado() -> bool:
-    return session.get("logado", False)
 
 
 @app.route("/login", methods=["GET", "POST"])
